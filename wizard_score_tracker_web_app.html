@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Wizard Score Tracker</title>
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="theme-color" content="#0f172a" />
+
+<link rel="manifest" href="data:application/manifest+json,{\"name\":\"Wizard Score Tracker\",\"short_name\":\"Wizard\",\"start_url\":\"./\",\"display\":\"standalone\",\"background_color\":\"#0f172a\",\"theme_color\":\"#0f172a\"}" />
+
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    margin: 0;
+    padding: 10px;
+    background: #0f172a;
+    color: white;
+  }
+
+  .card {
+    background: #1e293b;
+    padding: 15px;
+    border-radius: 14px;
+    margin-bottom: 10px;
+  }
+
+  input, select {
+    width: 100%;
+    padding: 12px;
+    margin: 6px 0;
+    border-radius: 10px;
+    border: none;
+    font-size: 16px;
+  }
+
+  button {
+    width: 100%;
+    padding: 14px;
+    margin-top: 10px;
+    border: none;
+    border-radius: 12px;
+    background: #22c55e;
+    color: black;
+    font-weight: 700;
+    font-size: 16px;
+  }
+
+  button.secondary { background:#334155; color:white; }
+
+  .rounds {
+    display:flex;
+    overflow-x:auto;
+    gap:6px;
+  }
+
+  .round-btn {
+    padding:8px;
+    min-width:55px;
+    border-radius:10px;
+    background:#334155;
+    text-align:center;
+    font-size:12px;
+  }
+
+  .active { background:#22c55e; color:black; }
+
+  .dealer { font-size:11px; opacity:.8; }
+
+  .row {
+    display:grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap:6px;
+    align-items:center;
+    margin-bottom:8px;
+  }
+
+  .small { font-size:12px; opacity:.8; }
+
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  th, td { border-bottom:1px solid #334155; padding:6px; text-align:center; vertical-align:top; }
+
+  .cell { font-size:11px; line-height:1.2; }
+  .delta-pos { color:#22c55e; }
+  .delta-neg { color:#ef4444; }
+</style>
+</head>
+<body>
+
+<div class="card" id="setup">
+  <h2>Wizard Score Tracker</h2>
+
+  <label>Players</label>
+  <select id="numPlayers">
+    <option>3</option><option>4</option><option>5</option><option>6</option>
+  </select>
+
+  <div id="playerNames"></div>
+
+  <label>Max Rounds (optional override)</label>
+  <input id="maxRoundsOverride" type="number" placeholder="auto" />
+
+  <button onclick="startGame()">Start Game</button>
+</div>
+
+<div id="game" style="display:none;">
+
+  <div class="card">
+    <div class="small">Rounds</div>
+    <div id="rounds" class="rounds"></div>
+  </div>
+
+  <div class="card" id="roundInput"></div>
+
+  <div class="card">
+    <h3>Leaderboard</h3>
+    <div id="leaderboard"></div>
+  </div>
+
+</div>
+
+<script>
+let players=[], rounds=[], currentRound=0;
+const KEY="wizard_state_v9";
+
+function save(){ localStorage.setItem(KEY, JSON.stringify({players,rounds,currentRound})); }
+function load(){ const d=localStorage.getItem(KEY); if(!d) return false; try{ const p=JSON.parse(d); players=p.players; rounds=p.rounds; currentRound=p.currentRound||0; return true;}catch{return false;} }
+
+function genPlayers(existing=[]){
+  const n=document.getElementById('numPlayers').value;
+  const el=document.getElementById('playerNames'); el.innerHTML="";
+  for(let i=0;i<n;i++) el.innerHTML+=`<input id=\"p${i}\" placeholder=\"Player ${i+1}\" value=\"${existing[i]?.name||''}\"/>`;
+}
+
+document.getElementById('numPlayers').onchange=genPlayers;
+genPlayers();
+
+function startGame(){
+  const n=+document.getElementById('numPlayers').value;
+  const maxOverride=document.getElementById('maxRoundsOverride').value;
+
+  players=[];
+  for(let i=0;i<n;i++) players.push({name:document.getElementById('p'+i).value||('P'+(i+1)),score:0});
+
+  const maxRounds=maxOverride?+maxOverride:Math.floor(60/n);
+
+  rounds=Array.from({length:maxRounds},(_,i)=>({
+    cards:i+1,
+    b:Array(n).fill(null),
+    t:Array(n).fill(null),
+    played:false
+  }));
+
+  currentRound=0;
+  document.getElementById('setup').style.display='none';
+  document.getElementById('game').style.display='block';
+
+  renderAll();
+  save();
+}
+
+function dealer(i){ return i%players.length; }
+
+function renderRounds(){
+  const el=document.getElementById('rounds'); el.innerHTML='';
+  rounds.forEach((r,i)=>{
+    el.innerHTML+=`<div class=\"round-btn ${i==currentRound?'active':''}\" onclick=\"go(${i})\">${i+1}<div class=\"dealer\">D:${players[dealer(i)]?.name}</div></div>`;
+  });
+}
+
+function go(i){ currentRound=i; renderAll(); save(); }
+
+function renderRound(){
+  const r=rounds[currentRound]; const d=dealer(currentRound);
+
+  let h=`<h3>Round ${currentRound+1} (${r.cards} cards each)</h3><div class=\"small\">Dealer: ${players[d]?.name}</div>`;
+
+  players.forEach((p,i)=>{
+    h+=`<div class=\"row\">
+      <div><b>${p.name}</b></div>
+      <select onchange=\"setB(${i},this.value)\">`;
+
+    for(let v=0; v<=r.cards; v++){
+      h+=`<option value=\"${v}\" ${r.b[i]==v?'selected':''}>Bid ${v}</option>`;
+    }
+
+    h+=`</select>
+      <input type=\"number\" placeholder=\"Tricks won\" value=\"${r.t[i]??''}\" oninput=\"setT(${i},this.value)\"/>
+    </div>`;
+  });
+
+  h+=`<button onclick=\"toggleRound()\">${r.played?'Unmark Round':'Save / Tally Round'}</button>`;
+
+  document.getElementById('roundInput').innerHTML=h;
+}
+
+function toggleRound(){
+  const r=rounds[currentRound];
+  const wasPlayed=r.played;
+
+  r.played=!r.played;
+  compute();
+  save();
+  renderAll();
+
+  // auto-advance only when saving (not unmarking)
+  if(!wasPlayed && r.played){
+    if(currentRound < rounds.length-1){
+      currentRound++;
+      renderAll();
+      save();
+    }
+  }
+}
+
+function setB(i,v){ rounds[currentRound].b[i]=v===''?null:+v; compute(); save(); }
+function setT(i,v){ rounds[currentRound].t[i]=v===''?null:+v; compute(); save(); }
+
+function compute(){
+  players.forEach(p=>p.score=0);
+  rounds.forEach(r=>{
+    if(!r.played) return;
+    players.forEach((p,i)=>{
+      const b=r.b[i],t=r.t[i];
+      if(b==null||t==null) return;
+      p.score+=(b===t)?(20+t*10):-Math.abs(b-t)*10;
+    });
+  });
+}
+
+function renderLeaderboard(){
+  let html='<table><tr><th>Round</th>';
+  players.forEach(p=> html+=`<th>${p.name}</th>`);
+  html+='</tr>';
+
+  let running=players.map(()=>0);
+
+  rounds.forEach((r,i)=>{
+    html+=`<tr><td>${i+1}</td>`;
+
+    players.forEach((p,pi)=>{
+      const b=r.b[pi]; const t=r.t[pi];
+
+      if(r.played && b!=null && t!=null){
+        const delta=(b===t)?(20+t*10):-Math.abs(b-t)*10;
+        running[pi]+=delta;
+
+        html+=`<td class=\"cell\">
+          <div>${b??'-'}/${t??'-'}</div>
+          <div class=\"${delta>=0?'delta-pos':'delta-neg'}\">${delta}</div>
+          <div>${running[pi]}</div>
+        </td>`;
+      } else {
+        html+=`<td>-</td>`;
+      }
+    });
+
+    html+='</tr>';
+  });
+
+  document.getElementById('leaderboard').innerHTML=html;
+}
+
+function renderAll(){ renderRounds(); renderRound(); compute(); renderLeaderboard(); }
+
+function init(){ if(load()&&players.length){ document.getElementById('setup').style.display='none'; document.getElementById('game').style.display='block'; renderAll(); } }
+init();
+</script>
+
+</body>
+</html>
