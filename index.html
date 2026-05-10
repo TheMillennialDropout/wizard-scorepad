@@ -20,6 +20,11 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<!-- Prevents the browser from caching the page aggressively -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+
 <title>Wizard Scorepad</title>
 
 <style>
@@ -109,7 +114,6 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
   .leader-score { font-weight: 800; color: var(--accent); }
   .delta { font-size: 0.75rem; display: block; }
   .hidden { display: none; }
-  
   .error-msg { color: var(--danger); font-size: 0.8rem; margin-bottom: 10px; font-weight: 600; }
 </style>
 </head>
@@ -157,13 +161,14 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
       </div>
     </div>
 
-    <button style="background: transparent; color: var(--danger); border: 1px solid var(--danger); margin-top: 20px;" onclick="reset()">Reset Game</button>
+    <button class="secondary" style="margin-top: 20px;" onclick="newGame()">New Game (Same Players)</button>
+    <button style="background: transparent; color: var(--danger); border: 1px solid var(--danger); margin-top: 10px;" onclick="reset()">Reset Everything</button>
   </div>
 </div>
 
 <script>
 let state = { players: [], rounds: [], idx: 0 };
-const STORAGE_KEY = "wizard_simple_v2";
+const STORAGE_KEY = "wizard_simple_v3";
 
 function createPlayerInputs() {
   const n = +document.getElementById('numPlayers').value;
@@ -184,7 +189,6 @@ function start() {
   const errorEl = document.getElementById('setupError');
   let hasError = false;
 
-  // Validation
   state.players = [];
   for(let i=0; i<n; i++) {
     const input = document.getElementById(`name${i}`);
@@ -200,10 +204,14 @@ function start() {
   if (hasError) {
     errorEl.classList.remove('hidden');
     return;
-  } else {
-    errorEl.classList.add('hidden');
   }
+  
+  errorEl.classList.add('hidden');
+  initGameStructure();
+}
 
+function initGameStructure() {
+  const n = state.players.length;
   const maxAllowed = Math.floor(60/n);
   let rCount = +document.getElementById('roundCount').value;
   
@@ -233,17 +241,14 @@ function renderNav() {
   const nav = document.getElementById('nav');
   nav.innerHTML = '';
   state.rounds.forEach((r, i) => {
-    nav.innerHTML += `
-      <div class="round-btn ${i === state.idx ? 'active' : ''} ${r.done ? 'played' : ''}" onclick="goTo(${i})">
-        R${i+1}
-      </div>`;
+    nav.innerHTML += `<div class="round-btn ${i === state.idx ? 'active' : ''} ${r.done ? 'played' : ''}" onclick="goTo(${i})">R${i+1}</div>`;
   });
 }
 
 function renderInputs() {
   const r = state.rounds[state.idx];
   const dealer = state.players[state.idx % state.players.length];
-  document.getElementById('roundTitle').innerText = `Round ${state.idx + 1} (${state.idx + 1} Cards) — Dealer: ${dealer}`;
+  document.getElementById('roundTitle').innerText = `Round ${state.idx + 1} — Dealer: ${dealer}`;
   
   const area = document.getElementById('inputArea');
   area.innerHTML = '';
@@ -259,7 +264,7 @@ function renderInputs() {
       <div class="player-row">
         <div style="font-weight:600">${name}</div>
         ${bidSelect}
-        <input type="number" value="${r.tricks[i]}" oninput="saveVal(${i}, 'tricks', this.value)" placeholder="Tricks Won" min="0" max="${state.idx + 1}" />
+        <input type="number" value="${r.tricks[i]}" oninput="saveVal(${i}, 'tricks', this.value)" placeholder="Tricks" min="0" max="${state.idx + 1}" />
       </div>`;
   });
 
@@ -279,10 +284,7 @@ function toggleStatus() {
 }
 
 function prevRound() {
-  if(state.idx > 0) {
-    state.idx--;
-    refresh();
-  }
+  if(state.idx > 0) { state.idx--; refresh(); }
 }
 
 function goTo(i) { state.idx = i; refresh(); }
@@ -299,36 +301,39 @@ function renderScores() {
   state.rounds.forEach((r, rIdx) => {
     if(!r.done) return;
     let row = `<tr><td>${rIdx+1}</td>`;
-    
     let scores = r.bids.map((b, pIdx) => {
       const t = r.tricks[pIdx];
       return (b === t) ? (20 + t * 10) : (Math.abs(b - t) * -10);
     });
-
     scores.forEach((s, pIdx) => totals[pIdx] += s);
     const lead = Math.max(...totals);
 
     state.players.forEach((_, pIdx) => {
       const isLead = totals[pIdx] === lead && lead !== 0;
-      row += `<td class="${isLead ? 'leader-score' : ''}">
-                ${totals[pIdx]}
-                <span class="delta" style="color:${scores[pIdx] >= 0 ? 'var(--success)' : 'var(--danger)'}">
-                  ${scores[pIdx] >= 0 ? '+' : ''}${scores[pIdx]}
-                </span>
-              </td>`;
+      row += `<td class="${isLead ? 'leader-score' : ''}">${totals[pIdx]} <span class="delta" style="color:${scores[pIdx] >= 0 ? 'var(--success)' : 'var(--danger)'}">${scores[pIdx] >= 0 ? '+' : ''}${scores[pIdx]}</span></td>`;
     });
     body.innerHTML += row + '</tr>';
   });
 }
 
+function newGame() {
+  if(confirm("Start a new game with these same players?")) {
+    initGameStructure();
+  }
+}
+
 function reset() {
-  if(confirm("Clear current game?")) {
+  if(confirm("Erase all players and data to start completely fresh?")) {
     localStorage.removeItem(STORAGE_KEY);
     location.reload();
   }
 }
 
-// Init
+// Ensure the page refreshes if content changes on the server
+if (window.performance && window.performance.navigation.type === window.performance.navigation.TYPE_BACK_FORWARD) {
+    location.reload();
+}
+
 createPlayerInputs();
 updateDefaultRounds();
 const saved = localStorage.getItem(STORAGE_KEY);
