@@ -19,296 +19,304 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Wizard Score Tracker</title>
-
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="theme-color" content="#0f172a" />
-
-<link rel="manifest" href="data:application/manifest+json,{\"name\":\"Wizard Score Tracker\",\"short_name\":\"Wizard\",\"start_url\":\"./\",\"display\":\"standalone\",\"background_color\":\"#0f172a\",\"theme_color\":\"#0f172a\"}" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Wizard Scorepad</title>
 
 <style>
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-    margin: 0;
-    padding: 10px;
-    background: #0f172a;
-    color: white;
+  :root {
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --primary: #1e293b;
+    --accent: #3b82f6;
+    --success: #10b981;
+    --danger: #ef4444;
+    --border: #e2e8f0;
+    --text: #1e293b;
+    --text-light: #64748b;
   }
 
-  .card {
-    background: #1e293b;
-    padding: 15px;
-    border-radius: 14px;
-    margin-bottom: 10px;
+  /* Dark Mode support */
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --primary: #f8fafc;
+      --accent: #60a5fa;
+      --border: #334155;
+      --text: #f8fafc;
+      --text-light: #94a3b8;
+    }
   }
 
-  input, select {
-    width: 100%;
-    padding: 12px;
-    margin: 6px 0;
-    border-radius: 10px;
-    border: none;
-    font-size: 16px;
+  body { 
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+    margin: 0; padding: 15px; 
+    background: var(--bg); color: var(--text);
   }
 
-  button {
-    width: 100%;
-    padding: 14px;
-    margin-top: 10px;
-    border: none;
-    border-radius: 12px;
-    background: #22c55e;
-    color: black;
-    font-weight: 700;
-    font-size: 16px;
+  .container { max-width: 600px; margin: 0 auto; }
+
+  .card { 
+    background: var(--card); padding: 20px; 
+    border-radius: 12px; margin-bottom: 15px; 
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
   }
 
-  button.secondary { background:#334155; color:white; }
+  h2, h3 { margin-top: 0; font-weight: 700; }
 
-  .rounds {
-    display:flex;
-    overflow-x:auto;
-    gap:6px;
+  label { display: block; margin-bottom: 6px; font-size: 0.8rem; font-weight: 600; color: var(--text-light); text-transform: uppercase; }
+
+  input, select { 
+    width: 100%; padding: 12px; margin-bottom: 15px; 
+    border-radius: 8px; border: 1px solid var(--border); 
+    background: var(--card); color: var(--text); font-size: 16px; 
+    box-sizing: border-box;
   }
 
-  .round-btn {
-    padding:8px;
-    min-width:55px;
-    border-radius:10px;
-    background:#334155;
-    text-align:center;
-    font-size:12px;
+  button { 
+    width: 100%; padding: 14px; border: none; border-radius: 8px; 
+    background: var(--accent); color: white; font-weight: 600; 
+    font-size: 1rem; cursor: pointer; transition: opacity 0.2s;
   }
 
-  .active { background:#22c55e; color:black; }
+  button:active { opacity: 0.8; }
+  button.secondary { background: var(--border); color: var(--text); margin-top: 8px; }
 
-  .dealer { font-size:11px; opacity:.8; }
+  .rounds-nav { display: flex; overflow-x: auto; gap: 8px; padding-bottom: 12px; scrollbar-width: none; }
+  .rounds-nav::-webkit-scrollbar { display: none; }
 
-  .row {
-    display:grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap:6px;
-    align-items:center;
-    margin-bottom:8px;
+  .round-btn { 
+    padding: 8px 12px; min-width: 50px; border-radius: 8px; 
+    background: var(--card); border: 1px solid var(--border);
+    text-align: center; font-size: 12px; flex-shrink: 0; cursor: pointer;
   }
 
-  .small { font-size:12px; opacity:.8; }
+  .round-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+  .round-btn.played { background: var(--success); color: white; border-color: var(--success); }
 
-  table { width:100%; border-collapse:collapse; font-size:12px; }
-  th, td { border-bottom:1px solid #334155; padding:6px; text-align:center; vertical-align:top; }
+  .player-row { 
+    display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 10px; 
+    align-items: center; margin-bottom: 12px; padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
 
-  .cell { font-size:11px; line-height:1.2; }
-  .delta-pos { color:#22c55e; }
-  .delta-neg { color:#ef4444; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 10px; }
+  th { text-align: center; padding: 8px; color: var(--text-light); border-bottom: 2px solid var(--border); }
+  td { padding: 10px 4px; text-align: center; border-bottom: 1px solid var(--border); }
+
+  .leader-score { font-weight: 800; color: var(--accent); }
+  .delta { font-size: 0.75rem; display: block; }
+  .hidden { display: none; }
 </style>
 </head>
 <body>
 
-<div class="card" id="setup">
-  <h2>Wizard Score Tracker</h2>
+<div class="container">
+  <!-- Setup Section -->
+  <div id="setup" class="card">
+    <h2>Wizard Scorepad</h2>
+    <label>Players</label>
+    <select id="numPlayers" onchange="createPlayerInputs(); updateDefaultRounds();">
+      <option value="3">3 Players</option>
+      <option value="4" selected>4 Players</option>
+      <option value="5">5 Players</option>
+      <option value="6">6 Players</option>
+    </select>
 
-  <label>Players</label>
-  <select id="numPlayers">
-    <option value="3">3</option>
-    <option value="4" selected>4</option>
-    <option value="5">5</option>
-    <option value="6">6</option>
-  </select>
+    <div id="playerList"></div>
 
-  <div id="playerNames"></div>
-
-  <label>Max Rounds (optional override)</label>
-  <input id="maxRoundsOverride" type="number" placeholder="auto" min="1" />
-  <div id="roundHint" class="small"></div>
-
-  <button onclick="startGame()">Start Game</button>
-</div>
-
-<div id="game" style="display:none;">
-
-  <div class="card">
-    <div class="small">Rounds</div>
-    <div id="rounds" class="rounds"></div>
+    <label>Rounds to Play</label>
+    <input id="roundCount" type="number" />
+    
+    <button onclick="start()">Start Game</button>
   </div>
 
-  <div class="card" id="roundInput"></div>
+  <!-- Game Section -->
+  <div id="game" class="hidden">
+    <div class="rounds-nav" id="nav"></div>
 
-  <div class="card">
-    <h3>Leaderboard</h3>
-    <div id="leaderboard"></div>
+    <div class="card">
+      <h3 id="roundTitle"></h3>
+      <div id="inputArea"></div>
+      <button id="actionBtn" onclick="toggleStatus()">Save Round</button>
+      <button class="secondary" onclick="prevRound()">Previous Round</button>
+    </div>
+
+    <div class="card">
+      <h3>Leaderboard</h3>
+      <div style="overflow-x: auto;">
+        <table>
+          <thead><tr id="lbHead"></tr></thead>
+          <tbody id="lbBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <button style="background: transparent; color: var(--danger); border: 1px solid var(--danger); margin-top: 20px;" onclick="reset()">Reset Game</button>
   </div>
-
 </div>
 
 <script>
-let players=[], rounds=[], currentRound=0;
-const KEY="wizard_state_v9";
+let state = { players: [], rounds: [], idx: 0 };
+const STORAGE_KEY = "wizard_simple_v1";
 
-function save(){ localStorage.setItem(KEY, JSON.stringify({players,rounds,currentRound})); }
-function load(){ const d=localStorage.getItem(KEY); if(!d) return false; try{ const p=JSON.parse(d); players=p.players; rounds=p.rounds; currentRound=p.currentRound||0; return true;}catch{return false;} }
-
-function genPlayers(existing=[]){
-  const n=document.getElementById('numPlayers').value;
-  const el=document.getElementById('playerNames'); el.innerHTML="";
-  for(let i=0;i<n;i++) el.innerHTML+=`<input id=\"p${i}\" placeholder=\"Player ${i+1}\" value=\"${existing[i]?.name||''}\"/>`;
-}
-
-document.getElementById('numPlayers').onchange=()=>{ genPlayers();
-updateHint(); updateHint(); };
-genPlayers();
-
-function updateHint(){
+function createPlayerInputs() {
   const n = +document.getElementById('numPlayers').value;
-  const maxPossible = Math.floor(60 / n);
-  const input = document.getElementById('maxRoundsOverride');
-  input.max = maxPossible;
-  document.getElementById('roundHint').innerText = `Max rounds for ${n} players: ${maxPossible}`;
-} players: ${maxPossible}`;
+  const list = document.getElementById('playerList');
+  list.innerHTML = '';
+  for(let i=0; i<n; i++) {
+    list.innerHTML += `<input id="name${i}" placeholder="Player ${i+1}" />`;
+  }
 }
 
-function startGame(){
-  const n=+document.getElementById('numPlayers').value;
-  const maxOverride=document.getElementById('maxRoundsOverride').value;
+function updateDefaultRounds() {
+  const n = +document.getElementById('numPlayers').value;
+  document.getElementById('roundCount').value = Math.floor(60 / n);
+}
 
-  players=[];
-  for(let i=0;i<n;i++) players.push({name:document.getElementById('p'+i).value||('P'+(i+1)),score:0});
+function start() {
+  const n = +document.getElementById('numPlayers').value;
+  const maxAllowed = Math.floor(60/n);
+  let rCount = +document.getElementById('roundCount').value;
+  
+  if (rCount > maxAllowed) rCount = maxAllowed;
+  if (rCount < 1) rCount = 1;
 
-  let maxRounds;
-  if(maxOverride){
-    const val = +maxOverride;
-    const maxPossible = Math.floor(60 / n);
-    if(isNaN(val) || val < 1) {
-      maxRounds = maxPossible;
-    } else {
-      maxRounds = Math.min(val, maxPossible);
-    }
-  } else {
-    maxRounds = Math.floor(60 / n);
+  state.players = [];
+  for(let i=0; i<n; i++) {
+    state.players.push(document.getElementById(`name${i}`).value || `P${i+1}`);
   }
 
-  rounds=Array.from({length:maxRounds},(_,i)=>({
-    cards:i+1,
-    b:Array(n).fill(null),
-    t:Array(n).fill(null),
-    played:false
+  state.rounds = Array.from({length: rCount}, (_, i) => ({
+    bids: Array(n).fill(0),
+    tricks: Array(n).fill(0),
+    done: false
   }));
 
-  currentRound=0;
-  document.getElementById('setup').style.display='none';
-  document.getElementById('game').style.display='block';
-
-  renderAll();
-  save();
+  state.idx = 0;
+  document.getElementById('setup').classList.add('hidden');
+  document.getElementById('game').classList.remove('hidden');
+  refresh();
 }
 
-function dealer(i){ return i%players.length; }
+function refresh() {
+  renderNav();
+  renderInputs();
+  renderScores();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
 
-function renderRounds(){
-  const el=document.getElementById('rounds'); el.innerHTML='';
-  rounds.forEach((r,i)=>{
-    el.innerHTML+=`<div class=\"round-btn ${i==currentRound?'active':''}\" onclick=\"go(${i})\">${i+1}<div class=\"dealer\">D:${players[dealer(i)]?.name}</div></div>`;
+function renderNav() {
+  const nav = document.getElementById('nav');
+  nav.innerHTML = '';
+  state.rounds.forEach((r, i) => {
+    nav.innerHTML += `
+      <div class="round-btn ${i === state.idx ? 'active' : ''} ${r.done ? 'played' : ''}" onclick="goTo(${i})">
+        R${i+1}
+      </div>`;
   });
 }
 
-function go(i){ currentRound=i; renderAll(); save(); }
-
-function renderRound(){
-  const r=rounds[currentRound]; const d=dealer(currentRound);
-
-  let h=`<h3>Round ${currentRound+1} (${r.cards} cards each)</h3><div class=\"small\">Dealer: ${players[d]?.name}</div>`;
-
-  players.forEach((p,i)=>{
-    h+=`<div class=\"row\">
-      <div><b>${p.name}</b></div>
-      <select onchange=\"setB(${i},this.value)\">`;
-
-    for(let v=0; v<=r.cards; v++){
-      h+=`<option value=\"${v}\" ${r.b[i]==v?'selected':''}>Bid ${v}</option>`;
+function renderInputs() {
+  const r = state.rounds[state.idx];
+  const dealer = state.players[state.idx % state.players.length];
+  document.getElementById('roundTitle').innerText = `Round ${state.idx + 1} (${state.idx + 1} Cards) — Dealer: ${dealer}`;
+  
+  const area = document.getElementById('inputArea');
+  area.innerHTML = '';
+  
+  state.players.forEach((name, i) => {
+    let bidSelect = `<select onchange="saveVal(${i}, 'bids', this.value)">`;
+    // Validation: Bid cannot exceed the number of cards in the round
+    for(let v=0; v <= state.idx + 1; v++) {
+      bidSelect += `<option value="${v}" ${r.bids[i] == v ? 'selected' : ''}>Bid ${v}</option>`;
     }
+    bidSelect += `</select>`;
 
-    h+=`</select>
-      <input type=\"number\" placeholder=\"Tricks won\" value=\"${r.t[i]??''}\" oninput=\"setT(${i},this.value)\"/>
-    </div>`;
+    area.innerHTML += `
+      <div class="player-row">
+        <div style="font-weight:600">${name}</div>
+        ${bidSelect}
+        <input type="number" value="${r.tricks[i]}" oninput="saveVal(${i}, 'tricks', this.value)" placeholder="Tricks Won" min="0" max="${state.idx + 1}" />
+      </div>`;
   });
 
-  h+=`<button onclick=\"toggleRound()\">${r.played?'Unmark Round':'Save / Tally Round'}</button>`;
-
-  document.getElementById('roundInput').innerHTML=h;
+  document.getElementById('actionBtn').innerText = r.done ? "Update Values" : "Finish Round";
+  document.getElementById('actionBtn').style.background = r.done ? "var(--primary)" : "var(--success)";
 }
 
-function toggleRound(){
-  const r=rounds[currentRound];
-  const wasPlayed=r.played;
+function saveVal(pIdx, type, val) {
+  state.rounds[state.idx][type][pIdx] = +val;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
 
-  r.played=!r.played;
-  compute();
-  save();
-  renderAll();
+function toggleStatus() {
+  state.rounds[state.idx].done = true;
+  if(state.idx < state.rounds.length - 1) state.idx++;
+  refresh();
+}
 
-  if(!wasPlayed && r.played){
-    if(currentRound < rounds.length-1){
-      currentRound++;
-      renderAll();
-      save();
-    }
+function prevRound() {
+  if(state.idx > 0) {
+    state.idx--;
+    refresh();
   }
 }
 
-function setB(i,v){ rounds[currentRound].b[i]=v===''?null:+v; compute(); save(); }
-function setT(i,v){ rounds[currentRound].t[i]=v===''?null:+v; compute(); save(); }
+function goTo(i) { state.idx = i; refresh(); }
 
-function compute(){
-  players.forEach(p=>p.score=0);
-  rounds.forEach(r=>{
-    if(!r.played) return;
-    players.forEach((p,i)=>{
-      const b=r.b[i],t=r.t[i];
-      if(b==null||t==null) return;
-      p.score+=(b===t)?(20+t*10):-Math.abs(b-t)*10;
+function renderScores() {
+  const head = document.getElementById('lbHead');
+  const body = document.getElementById('lbBody');
+  head.innerHTML = '<th>Rd</th>';
+  state.players.forEach(p => head.innerHTML += `<th>${p}</th>`);
+  
+  body.innerHTML = '';
+  let totals = Array(state.players.length).fill(0);
+
+  state.rounds.forEach((r, rIdx) => {
+    if(!r.done) return;
+    let row = `<tr><td>${rIdx+1}</td>`;
+    
+    let scores = r.bids.map((b, pIdx) => {
+      const t = r.tricks[pIdx];
+      return (b === t) ? (20 + t * 10) : (Math.abs(b - t) * -10);
     });
+
+    scores.forEach((s, pIdx) => totals[pIdx] += s);
+    const lead = Math.max(...totals);
+
+    state.players.forEach((_, pIdx) => {
+      const isLead = totals[pIdx] === lead && lead !== 0;
+      row += `<td class="${isLead ? 'leader-score' : ''}">
+                ${totals[pIdx]}
+                <span class="delta" style="color:${scores[pIdx] >= 0 ? 'var(--success)' : 'var(--danger)'}">
+                  ${scores[pIdx] >= 0 ? '+' : ''}${scores[pIdx]}
+                </span>
+              </td>`;
+    });
+    body.innerHTML += row + '</tr>';
   });
 }
 
-function renderLeaderboard(){
-  let html='<table><tr><th>Round</th>';
-  players.forEach(p=> html+=`<th>${p.name}</th>`);
-  html+='</tr>';
-
-  let running=players.map(()=>0);
-
-  rounds.forEach((r,i)=>{
-    html+=`<tr><td>${i+1}</td>`;
-
-    players.forEach((p,pi)=>{
-      const b=r.b[pi]; const t=r.t[pi];
-
-      if(r.played && b!=null && t!=null){
-        const delta=(b===t)?(20+t*10):-Math.abs(b-t)*10;
-        running[pi]+=delta;
-
-        html+=`<td class=\"cell\">
-          <div>${b??'-'}/${t??'-'}</div>
-          <div class=\"${delta>=0?'delta-pos':'delta-neg'}\">${delta}</div>
-          <div>${running[pi]}</div>
-        </td>`;
-      } else {
-        html+=`<td>-</td>`;
-      }
-    });
-
-    html+='</tr>';
-  });
-
-  document.getElementById('leaderboard').innerHTML=html;
+function reset() {
+  if(confirm("Clear current game?")) {
+    localStorage.removeItem(STORAGE_KEY);
+    location.reload();
+  }
 }
 
-function renderAll(){ renderRounds(); renderRound(); compute(); renderLeaderboard(); }
-
-function init(){ if(load()&&players.length){ document.getElementById('setup').style.display='none'; document.getElementById('game').style.display='block'; renderAll(); } }
-init();
+// Init
+createPlayerInputs();
+updateDefaultRounds();
+const saved = localStorage.getItem(STORAGE_KEY);
+if(saved) {
+  state = JSON.parse(saved);
+  document.getElementById('setup').classList.add('hidden');
+  document.getElementById('game').classList.remove('hidden');
+  refresh();
+}
 </script>
-
 </body>
 </html>
