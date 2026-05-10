@@ -1,6 +1,6 @@
 <!--
 Wizard Score Tracker
-Copyright (C) The Millennial Dropout 2026 
+Copyright (C) 2026
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -111,13 +111,16 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
   <label>Players</label>
   <select id="numPlayers">
-    <option>3</option><option>4</option><option>5</option><option>6</option>
+    <option value="3">3</option>
+    <option value="4" selected>4</option>
+    <option value="5">5</option>
+    <option value="6">6</option>
   </select>
 
   <div id="playerNames"></div>
 
   <label>Max Rounds (optional override)</label>
-  <input id="maxRoundsOverride" type="number" placeholder="auto" />
+  <input id="maxRoundsOverride" type="number" placeholder="auto" min="1" />
   <div id="roundHint" class="small"></div>
 
   <button onclick="startGame()">Start Game</button>
@@ -159,7 +162,10 @@ genPlayers();
 function updateHint(){
   const n = +document.getElementById('numPlayers').value;
   const maxPossible = Math.floor(60 / n);
+  const input = document.getElementById('maxRoundsOverride');
+  input.max = maxPossible;
   document.getElementById('roundHint').innerText = `Max rounds for ${n} players: ${maxPossible}`;
+} players: ${maxPossible}`;
 }
 
 function startGame(){
@@ -306,4 +312,3 @@ init();
 
 </body>
 </html>
-
