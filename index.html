@@ -1,6 +1,6 @@
 <!--
 Wizard Score Tracker
-Copyright (C) The Millennial Dropout 2026
+Copyright (C) The Millennial Dropout 2026 
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -118,6 +118,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
   <label>Max Rounds (optional override)</label>
   <input id="maxRoundsOverride" type="number" placeholder="auto" />
+  <div id="roundHint" class="small"></div>
 
   <button onclick="startGame()">Start Game</button>
 </div>
@@ -151,8 +152,15 @@ function genPlayers(existing=[]){
   for(let i=0;i<n;i++) el.innerHTML+=`<input id=\"p${i}\" placeholder=\"Player ${i+1}\" value=\"${existing[i]?.name||''}\"/>`;
 }
 
-document.getElementById('numPlayers').onchange=genPlayers;
+document.getElementById('numPlayers').onchange=()=>{ genPlayers();
+updateHint(); updateHint(); };
 genPlayers();
+
+function updateHint(){
+  const n = +document.getElementById('numPlayers').value;
+  const maxPossible = Math.floor(60 / n);
+  document.getElementById('roundHint').innerText = `Max rounds for ${n} players: ${maxPossible}`;
+}
 
 function startGame(){
   const n=+document.getElementById('numPlayers').value;
@@ -161,7 +169,18 @@ function startGame(){
   players=[];
   for(let i=0;i<n;i++) players.push({name:document.getElementById('p'+i).value||('P'+(i+1)),score:0});
 
-  const maxRounds=maxOverride?+maxOverride:Math.floor(60/n);
+  let maxRounds;
+  if(maxOverride){
+    const val = +maxOverride;
+    const maxPossible = Math.floor(60 / n);
+    if(isNaN(val) || val < 1) {
+      maxRounds = maxPossible;
+    } else {
+      maxRounds = Math.min(val, maxPossible);
+    }
+  } else {
+    maxRounds = Math.floor(60 / n);
+  }
 
   rounds=Array.from({length:maxRounds},(_,i)=>({
     cards:i+1,
@@ -287,3 +306,4 @@ init();
 
 </body>
 </html>
+
